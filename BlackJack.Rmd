@@ -1,0 +1,266 @@
+---
+title: "BlackJack"
+output: html_document
+date: "2025-02-15"
+---
+
+
+
+
+
+```{r}
+set.seed(123)
+
+#sum player's hand
+sum.p <- function(){
+  if(any(p.hand==11) && (sum(p.hand)>21)){
+    p.hand[which(p.hand==11)[1]] <<- 1
+  }
+  return(sum(p.hand))
+}
+
+#sum dealer's hand
+sum.d <- function(){
+  if(any(d.hand==11) && (sum(d.hand)>21)){
+    d.hand[which(d.hand==11)[1]] <<- 1
+  }
+  return(sum(d.hand))
+}
+
+#Update deck
+deck.new <- function(hand){
+  for(i in hand){
+    if(is.element(i,deck)){
+      deck<<-deck[-match(i,deck)] 
+    }
+  }
+}
+
+#Check blackjack
+Blackjack <- function(x){
+  if(any(x==11) && (sum(x)==21)){
+    return(TRUE)
+  }else{
+    return(FALSE)
+  }
+}
+
+#Update count
+count.new <- function(x){
+  for(i in 1:length(x)){
+    if(x[i]>=10){
+      count<<-count-1
+    }else if(x[i]<=6){
+      count<<-count+1
+    }
+  }
+}
+
+
+sim.iter =5000
+iter = 50
+result.sim.sum = rep(NA,sim.iter)
+result.bet.sim = c()
+result.sim = c()
+print.by=sim.iter/10
+
+for(sim in 1:sim.iter){
+  
+  if(sim %% print.by == 0) print(sim)
+
+deck = c(11,11,11,11,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,9,9,9,9,8,8,8,8,7,7,7,7,6,6,6,6,5,5,5,5,4,4,4,4,3,3,3,3,2,2,2,2)
+
+deck=rep(deck,6)
+
+result = rep(NA,iter)
+result.phands = list()
+result.dhands = list()
+  
+
+count = 0
+result.bet=rep(NA,iter)
+
+counting=T
+
+for(k in 1:iter){
+
+  count.true = count/(length(deck)/52)
+
+  
+  if(counting){
+    if(count.true>1){
+      bet=10*count.true
+    }else{
+      bet=1
+    }
+  }else{
+    bet=10
+  }
+  
+  
+
+
+  p.win = tie = F
+  
+  p.hand = sample(deck,2,F) #player's hand
+  deck.new(p.hand)
+  count.new(p.hand)
+  
+  d.hand = sample(deck,2,F) #dealer's hand
+  deck.new(d.hand)
+  count.new(d.hand)
+  
+  #========Check for Blackjack=========#
+  if(Blackjack(p.hand) && Blackjack(d.hand)){
+    tie=T
+    result[k]=0    
+    result.phands[[k]] = p.hand
+    result.dhands[[k]] = d.hand
+    result.bet[k]=bet
+    next;
+  }else if(Blackjack(p.hand)){
+    p.win=T
+    result[k]=1.5    
+    result.phands[[k]] = p.hand
+    result.dhands[[k]] = d.hand
+    result.bet[k]=bet
+    next
+  }else if(Blackjack(d.hand)){
+    p.win=F
+    result[k]=-1
+    result.phands[[k]] = p.hand
+    result.dhands[[k]] = d.hand
+    result.bet[k]=bet
+    next
+  }
+  
+  #========Player's Turn========#
+  if(sum.p()==11){#Double down on 11
+    bet=bet*2
+    p.hand.add = sample(deck, 1, F)
+    deck.new(p.hand.add)
+    count.new(p.hand.add)
+    p.hand = c(p.hand, p.hand.add)
+  }else{ #For all other options
+    
+    while(sum.p()<=11){ #must draw when < 11
+      p.hand.add = sample(deck, 1, F)
+      deck.new(p.hand.add)
+      count.new(p.hand.add)
+      p.hand = c(p.hand, p.hand.add)
+    }
+    
+    if(d.hand[1]>=7){ #must work for it when dealer >= 7
+      while(sum.p()<=16){
+        p.hand.add = sample(deck, 1, F)
+        deck.new(p.hand.add)
+        count.new(p.hand.add)
+        p.hand = c(p.hand, p.hand.add)
+      }
+    }
+    
+    if(sum.p()>21){ #check for bust
+      p.win = F
+      result[k]=-1
+      result.phands[[k]] = p.hand
+      result.dhands[[k]] = d.hand
+      result.bet[k]=bet
+      next;
+    }
+  }
+  
+  
+  
+  #========Dealer's Turn========#
+  while(sum.d()<=16){ #must draw till 17
+      d.hand.add = sample(deck, 1, F)
+      deck.new(d.hand.add)
+      count.new(d.hand.add)
+      d.hand = c(d.hand, d.hand.add)
+  }
+  if(sum.d()>21){ #check for bust
+    p.win = T
+    result[k]=1
+    result.phands[[k]] = p.hand
+    result.dhands[[k]] = d.hand
+    result.bet[k]=bet
+    next;
+  }
+  
+  #check who wins
+  if(sum(p.hand) > sum(d.hand)){
+    p.win=T
+    result[k]=1
+    result.phands[[k]] = p.hand
+    result.dhands[[k]] = d.hand
+    result.bet[k]=bet
+  }else if(sum(p.hand) == sum(d.hand)){
+    tie=T
+    result[k]=0
+    result.phands[[k]] = p.hand
+    result.dhands[[k]] = d.hand
+    result.bet[k]=bet
+  }else{
+    result[k]=-1
+    result.phands[[k]] = p.hand
+    result.dhands[[k]] = d.hand
+    result.bet[k]=bet
+  }
+  
+}#End loop
+
+
+result.bet.sim = c(result.bet.sim, result.bet)
+result.sim = c(result.sim, result)
+result.sim.sum[sim] = sum(result*result.bet)
+
+}#End sim
+
+###Note
+#result.sim represents win/lose status for each game
+#result.bet represents total bet for each game
+#result.sim.sum represent amount of money won/lost.
+
+#Proportion of win/draw/lose/Blackjack(win)
+table(result.sim) / (iter*sim.iter)
+
+#mean winning
+mean(result.sim.sum)
+
+#Dist of winning
+hist(result.sim.sum)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
