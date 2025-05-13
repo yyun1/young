@@ -1,15 +1,6 @@
----
-title: "BlackJack"
-output: html_document
-date: "2025-02-15"
----
+set.seed(123) #Setting seed for repeatable result
 
-
-
-
-
-```{r}
-set.seed(123)
+counting=F #If TRUE, betting is based on counting strategy.
 
 #sum player's hand
 sum.p <- function(){
@@ -80,7 +71,7 @@ result.dhands = list()
 count = 0
 result.bet=rep(NA,iter)
 
-counting=T
+
 
 for(k in 1:iter){
 
@@ -217,50 +208,21 @@ result.sim.sum[sim] = sum(result*result.bet)
 }#End sim
 
 ###Note
-#result.sim represents win/lose status for each game
-#result.bet represents total bet for each game
-#result.sim.sum represent amount of money won/lost.
+#result.sim represents win/lose status for each hand
+#result.bet represents total bet for each hand
+#result.sim.sum represent amount of money won/lost(=winnings) for each shoe(=1 iteration of sim).
+
+status = data.frame(winOrLose = result.sim, bet = result.bet)
+winning = data.frame(winnings=result.sim.sum)
 
 #Proportion of win/draw/lose/Blackjack(win)
-table(result.sim) / (iter*sim.iter)
-
+win.table = matrix(table(status$winOrLose) / (iter*sim.iter), ncol=4)
+colnames(win.table) = c("Lose", "Draw", "Win", "Win_BJ")
+rownames(win.table) = c("Probability")
+win.table
 #mean winning
-mean(result.sim.sum)
+mean(winning$winnings)
 
 #Dist of winning
-hist(result.sim.sum)
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+hist(winning$winnings, xlab = "winnings", main="Histogram of winnings")
+abline(v=mean(winning$winnings), col='red', lwd=2)
